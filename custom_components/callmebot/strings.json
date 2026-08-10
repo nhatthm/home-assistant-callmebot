@@ -1,0 +1,8 @@
+{
+  "title": "CallMeBot API",
+  "config": {
+    "abort": {
+      "already_configured": "CallMeBot API is already configured."
+    }
+  }
+}

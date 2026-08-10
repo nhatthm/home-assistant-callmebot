@@ -1,0 +1,12 @@
+{
+  "domain": "callmebot",
+  "name": "CallMeBot API",
+  "codeowners": ["@nhatthm"],
+  "config_flow": true,
+  "documentation": "https://github.com/nhatthm/home-assistant-callmebot",
+  "integration_type": "service",
+  "issue_tracker": "https://github.com/nhatthm/home-assistant-callmebot/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}
