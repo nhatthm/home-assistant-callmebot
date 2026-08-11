@@ -1,6 +1,5 @@
-PYTHON ?= python3
-RUFF ?= $(PYTHON) -m ruff
-PYTEST ?= $(PYTHON) -m pytest
+RUFF ?= ruff
+PYTEST ?= pytest
 
 .PHONY: lint
 lint: lint-python
