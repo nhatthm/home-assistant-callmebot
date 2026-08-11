@@ -27,9 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Determine next version
         id: version
@@ -79,6 +81,7 @@ jobs:
 
       - name: Check for an existing release pull request
         env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.new_version }}
         run: |
@@ -92,7 +95,9 @@ jobs:
             --jq '.[0].number // empty')
 
           if [[ -n "$existing_pr" ]]; then
-            echo "::error::Release pull request #$existing_pr already exists for $VERSION."
+            printf \
+              '::error::Release pull request #%s already exists for %s.\n' \
+              "$existing_pr" "$VERSION"
             exit 1
           fi
 
@@ -126,7 +131,7 @@ jobs:
             --method POST
             "repos/$GITHUB_REPOSITORY/releases/generate-notes"
             -f "tag_name=$VERSION"
-            -f "target_commitish=${{ github.event.repository.default_branch }}"
+            -f "target_commitish=$DEFAULT_BRANCH"
           )
           if [[ -n "$PREVIOUS_VERSION" ]]; then
             api_args+=(-f "previous_tag_name=$PREVIOUS_VERSION")
@@ -202,12 +207,14 @@ jobs:
       - name: Create release pull request
         id: release_pr
         env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.new_version }}
         run: |
           set -euo pipefail
 
           branch="release/$VERSION"
+          gh auth setup-git
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
@@ -216,12 +223,14 @@ jobs:
           git push origin "$branch"
           echo "branch_pushed=true" >> "$GITHUB_OUTPUT"
 
+          body="Bump CallMeBot API to $VERSION"
+          body+=" and add its generated release notes."
           gh pr create \
             --repo "$GITHUB_REPOSITORY" \
-            --base "${{ github.event.repository.default_branch }}" \
+            --base "$DEFAULT_BRANCH" \
             --head "$branch" \
             --title "Prepare release $VERSION" \
-            --body "Bump CallMeBot API to $VERSION and add its generated release notes." \
+            --body "$body" \
             --label release
 
       - name: Clean up release branch after failure

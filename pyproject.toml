@@ -1,0 +1,42 @@
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",
+    "CPY001",
+    "D203",
+    "D213",
+    "ISC001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"custom_components/callmebot/__init__.py" = ["ARG001"]
+"custom_components/callmebot/config_flow.py" = ["ARG002"]
+"tests/**/*.py" = ["PLR2004", "S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["custom_components/callmebot"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
