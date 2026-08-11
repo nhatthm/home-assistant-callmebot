@@ -64,6 +64,7 @@ async def test_setup_trigger_and_unload_entry(
     entity_id = f"notify.{object_id}"
     entry = MockConfigEntry(
         domain=DOMAIN,
+        title=f"Telegram Text Message {recipient}",
         unique_id=object_id,
         data={
             CONF_INTEGRATION_TYPE: INTEGRATION_TELEGRAM,
@@ -75,7 +76,9 @@ async def test_setup_trigger_and_unload_entry(
 
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    assert hass.states.get(entity_id) is not None
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert state.name == f"Telegram Text Message {recipient}"
 
     with caplog.at_level(logging.INFO):
         await hass.services.async_call(
