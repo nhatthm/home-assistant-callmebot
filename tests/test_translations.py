@@ -32,6 +32,14 @@ async def test_config_flow_field_translations(hass: HomeAssistant) -> None:
         ]
         == "Message Type"
     )
+    assert (
+        translations["component.callmebot.config.step.telegram_call.data.recipient"]
+        == "Username or phone number"
+    )
+    assert (
+        "https://api2.callmebot.com/txt/auth.php"
+        in translations["component.callmebot.config.step.telegram_call.description"]
+    )
     assert translations[
         "component.callmebot.config.step.telegram_text.description"
     ] == (
@@ -54,4 +62,10 @@ async def test_config_flow_field_translations(hass: HomeAssistant) -> None:
     ] == (
         "Permission denied for {recipient}. Authorize CallMeBot using the "
         "authentication link above and try again."
+    )
+    assert translations[
+        "component.callmebot.config.error.telegram_call_rate_limited"
+    ] == (
+        "CallMeBot rate-limited Telegram calls to this recipient. Please try again "
+        "later."
     )

@@ -17,13 +17,18 @@ from custom_components.callmebot.const import (
     INTEGRATION_TELEGRAM,
 )
 from custom_components.callmebot.telegram import (
+    MESSAGE_TYPE_CALL,
     MESSAGE_TYPE_TEXT,
     text_notify_object_id,
 )
 from custom_components.callmebot.telegram.api import (
-    CallMeBotTelegramTextAPIError,
-    CallMeBotTelegramTextConnectionError,
+    TelegramCallAPIError,
+    TelegramCallAPIErrorCode,
+    TelegramCallConnectionError,
+    TelegramCallResult,
+    TelegramTextAPIError,
     TelegramTextAPIErrorCode,
+    TelegramTextConnectionError,
 )
 
 if TYPE_CHECKING:
@@ -55,6 +60,72 @@ async def _advance_to_telegram(hass: HomeAssistant) -> str:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "telegram_text"
     return result["flow_id"]
+
+
+async def _advance_to_call(hass: HomeAssistant) -> dict[str, object]:
+    """Advance a config flow to its Telegram Call recipient form."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_INTEGRATION_TYPE: INTEGRATION_TELEGRAM}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MESSAGE_TYPE: MESSAGE_TYPE_CALL}
+    )
+    assert result["step_id"] == "telegram_call"
+    return result
+
+
+async def test_call_flow_creates_entry(hass: HomeAssistant) -> None:
+    """Test Telegram Call recipient validation and entry creation."""
+    result = await _advance_to_call(hass)
+    with patch(
+        "custom_components.callmebot.telegram.config_flow.async_validate_call_recipient",
+        new=AsyncMock(return_value=TelegramCallResult.REJECTED),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_RECIPIENT: "@sample_user"}
+        )
+    assert result["step_id"] == "telegram_call_confirm"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Telegram Call @sample_user"
+    assert result["data"][CONF_MESSAGE_TYPE] == MESSAGE_TYPE_CALL
+
+
+@pytest.mark.parametrize(
+    ("api_error", "expected_error"),
+    [
+        (
+            TelegramCallConnectionError(),
+            "telegram_call_cannot_connect",
+        ),
+        (
+            TelegramCallAPIError(TelegramCallAPIErrorCode.PERMISSION_DENIED),
+            "telegram_call_permission_denied",
+        ),
+    ],
+)
+async def test_call_flow_api_error(
+    hass: HomeAssistant,
+    api_error: Exception,
+    expected_error: str,
+) -> None:
+    """Test Telegram Call validation errors stay on the recipient form."""
+    result = await _advance_to_call(hass)
+
+    with patch(
+        "custom_components.callmebot.telegram.config_flow.async_validate_call_recipient",
+        new=AsyncMock(side_effect=api_error),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_RECIPIENT: "@sample_user"}
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "telegram_call"
+    assert result["errors"] == {"base": expected_error}
 
 
 async def _advance_to_confirm(hass: HomeAssistant, recipient: str) -> str:
@@ -129,9 +200,7 @@ async def test_api_error_is_displayed_in_full(hass: HomeAssistant) -> None:
     with patch(
         "custom_components.callmebot.telegram.config_flow.async_validate_text_recipient",
         new=AsyncMock(
-            side_effect=CallMeBotTelegramTextAPIError(
-                TelegramTextAPIErrorCode.PERMISSION_DENIED
-            )
+            side_effect=TelegramTextAPIError(TelegramTextAPIErrorCode.PERMISSION_DENIED)
         ),
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -150,7 +219,7 @@ async def test_connection_error(hass: HomeAssistant) -> None:
 
     with patch(
         "custom_components.callmebot.telegram.config_flow.async_validate_text_recipient",
-        new=AsyncMock(side_effect=CallMeBotTelegramTextConnectionError),
+        new=AsyncMock(side_effect=TelegramTextConnectionError),
     ):
         result = await hass.config_entries.flow.async_configure(
             flow_id,

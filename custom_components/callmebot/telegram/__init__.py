@@ -12,6 +12,8 @@ _RECIPIENT_HASH_LENGTH = 16
 INVALID_RECIPIENT: Final = "invalid_recipient"
 
 MESSAGE_TYPE_TEXT: Final = "text"
+MESSAGE_TYPE_CALL: Final = "call"
+CALL_API_URL: Final = "https://api.callmebot.com/start.php"
 TEXT_API_URL: Final = "https://api.callmebot.com/text.php"
 TEXT_VALIDATION_MESSAGE: Final = "This is a test from Callmebot"
 
@@ -41,3 +43,8 @@ def recipient_hash(recipient: str) -> str:
 def text_notify_object_id(recipient: str) -> str:
     """Return the deterministic Telegram Text Message entity object ID."""
     return f"callmebot_telegram_{recipient_hash(recipient)}_text"
+
+
+def call_notify_object_id(recipient: str) -> str:
+    """Return the deterministic Telegram Call entity object ID."""
+    return f"callmebot_telegram_{recipient_hash(recipient)}_call"

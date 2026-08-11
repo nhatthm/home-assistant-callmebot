@@ -4,6 +4,7 @@ import pytest
 import voluptuous as vol
 
 from custom_components.callmebot.telegram import (
+    call_notify_object_id,
     normalize_recipient,
     recipient_hash,
     text_notify_object_id,
@@ -42,4 +43,11 @@ def test_text_notify_object_id() -> None:
     """Test deterministic Telegram Text Message entity ID generation."""
     assert text_notify_object_id("+1234567890") == (
         "callmebot_telegram_c775e7b757ede630_text"
+    )
+
+
+def test_call_notify_object_id() -> None:
+    """Test deterministic Telegram Call entity ID generation."""
+    assert call_notify_object_id("+1234567890") == (
+        "callmebot_telegram_c775e7b757ede630_call"
     )

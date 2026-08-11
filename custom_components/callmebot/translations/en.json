@@ -16,6 +16,17 @@
           "message_type": "Message Type"
         }
       },
+      "telegram_call": {
+        "title": "Configure Telegram calls",
+        "description": "Enter a Telegram username beginning with `@` or a full international phone number such as `+1234567890`. A test call will validate access. If authorization is missing, [authenticate the Telegram recipient](https://api2.callmebot.com/txt/auth.php) and try again.",
+        "data": {
+          "recipient": "Username or phone number"
+        }
+      },
+      "telegram_call_confirm": {
+        "title": "Create Telegram Call notify entity",
+        "description": "CallMeBot completed the test call for `{recipient}`. Submit to create the notify entity."
+      },
       "telegram_text": {
         "title": "Configure Telegram text messages",
         "description": "Enter a Telegram username beginning with `@` or a full international phone number such as `+1234567890`. A test message will be sent to validate access. If CallMeBot reports permission denied, [authenticate the Telegram recipient](https://api2.callmebot.com/txt/login.php) and try again.",
@@ -32,7 +43,12 @@
       "telegram_text_api_error": "The CallMeBot Telegram text API rejected the request.",
       "telegram_text_cannot_connect": "Unable to connect to the CallMeBot Telegram text API. Please try again.",
       "telegram_text_invalid_recipient": "Enter a Telegram username beginning with `@` or a full phone number with country code, such as `+1234567890`.",
-      "telegram_text_permission_denied": "Permission denied for {recipient}. Authorize CallMeBot using the authentication link above and try again."
+      "telegram_text_permission_denied": "Permission denied for {recipient}. Authorize CallMeBot using the authentication link above and try again.",
+      "telegram_call_api_error": "The CallMeBot Telegram Call API rejected the request.",
+      "telegram_call_cannot_connect": "Unable to connect to the CallMeBot Telegram Call API. Please try again.",
+      "telegram_call_invalid_recipient": "Enter a Telegram username beginning with `@` or a full phone number with country code, such as `+1234567890`.",
+      "telegram_call_permission_denied": "Permission denied for {recipient}. Authorize CallMeBot using the authentication link above and try again.",
+      "telegram_call_rate_limited": "CallMeBot rate-limited Telegram calls to this recipient. Please try again later."
     },
     "abort": {
       "already_configured": "This CallMeBot notify entity is already configured.",

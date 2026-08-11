@@ -16,10 +16,19 @@ from custom_components.callmebot.const import (
     INTEGRATION_TELEGRAM,
 )
 
-from . import MESSAGE_TYPE_TEXT, text_notify_object_id, validate_recipient
+from . import (
+    MESSAGE_TYPE_CALL,
+    MESSAGE_TYPE_TEXT,
+    call_notify_object_id,
+    text_notify_object_id,
+    validate_recipient,
+)
 from .api import (
-    CallMeBotTelegramTextAPIError,
-    CallMeBotTelegramTextConnectionError,
+    TelegramCallAPIError,
+    TelegramCallConnectionError,
+    TelegramTextAPIError,
+    TelegramTextConnectionError,
+    async_validate_call_recipient,
     async_validate_text_recipient,
 )
 
@@ -42,6 +51,8 @@ class TelegramConfigFlow:
     ) -> ConfigFlowResult:
         """Select the Telegram message type."""
         if user_input is not None:
+            if user_input[CONF_MESSAGE_TYPE] == MESSAGE_TYPE_CALL:
+                return await self._flow.async_step_telegram_call()
             return await self._flow.async_step_telegram_text()
 
         return self._flow.async_show_form(
@@ -52,9 +63,13 @@ class TelegramConfigFlow:
                         selector.SelectSelectorConfig(
                             options=[
                                 selector.SelectOptionDict(
+                                    value=MESSAGE_TYPE_CALL,
+                                    label="Call",
+                                ),
+                                selector.SelectOptionDict(
                                     value=MESSAGE_TYPE_TEXT,
                                     label="Text Message",
-                                )
+                                ),
                             ],
                             mode=selector.SelectSelectorMode.DROPDOWN,
                         )
@@ -67,30 +82,55 @@ class TelegramConfigFlow:
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Validate a Telegram Text Message recipient with CallMeBot."""
+        return await self._async_step_recipient(MESSAGE_TYPE_TEXT, user_input)
+
+    async def async_step_call(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Validate a Telegram Call recipient with CallMeBot."""
+        return await self._async_step_recipient(MESSAGE_TYPE_CALL, user_input)
+
+    async def _async_step_recipient(
+        self,
+        message_type: str,
+        user_input: dict[str, Any] | None,
+    ) -> ConfigFlowResult:
+        """Validate a recipient for the selected Telegram message type."""
         errors: dict[str, str] = {}
         recipient = ""
+        step_id = f"telegram_{message_type}"
 
         if user_input is not None:
             recipient = user_input[CONF_RECIPIENT]
             try:
                 recipient = validate_recipient(recipient)
             except vol.Invalid:
-                errors[CONF_RECIPIENT] = "telegram_text_invalid_recipient"
+                errors[CONF_RECIPIENT] = f"{step_id}_invalid_recipient"
             else:
                 try:
-                    await async_validate_text_recipient(
-                        async_get_clientsession(self._flow.hass), recipient
-                    )
-                except CallMeBotTelegramTextConnectionError:
-                    errors["base"] = "telegram_text_cannot_connect"
-                except CallMeBotTelegramTextAPIError as err:
+                    session = async_get_clientsession(self._flow.hass)
+                    if message_type == MESSAGE_TYPE_CALL:
+                        await async_validate_call_recipient(session, recipient)
+                    else:
+                        await async_validate_text_recipient(session, recipient)
+                except (
+                    TelegramCallConnectionError,
+                    TelegramTextConnectionError,
+                ):
+                    errors["base"] = f"{step_id}_cannot_connect"
+                except (
+                    TelegramCallAPIError,
+                    TelegramTextAPIError,
+                ) as err:
                     errors["base"] = err.code.value
                 else:
                     self._recipient = recipient
+                    if message_type == MESSAGE_TYPE_CALL:
+                        return await self._flow.async_step_telegram_call_confirm()
                     return await self._flow.async_step_telegram_text_confirm()
 
         return self._flow.async_show_form(
-            step_id="telegram_text",
+            step_id=step_id,
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_RECIPIENT, default=recipient): (
@@ -106,8 +146,27 @@ class TelegramConfigFlow:
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Confirm Telegram Text Message entity creation."""
+        return await self._async_step_confirm(MESSAGE_TYPE_TEXT, user_input)
+
+    async def async_step_call_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm Telegram Call entity creation."""
+        return await self._async_step_confirm(MESSAGE_TYPE_CALL, user_input)
+
+    async def _async_step_confirm(
+        self,
+        message_type: str,
+        user_input: dict[str, Any] | None,
+    ) -> ConfigFlowResult:
+        """Confirm entity creation for the selected Telegram message type."""
         if user_input is not None:
-            object_id = text_notify_object_id(self._recipient)
+            is_call = message_type == MESSAGE_TYPE_CALL
+            object_id = (
+                call_notify_object_id(self._recipient)
+                if is_call
+                else text_notify_object_id(self._recipient)
+            )
             entity_id = f"notify.{object_id}"
             registry = er.async_get(self._flow.hass)
 
@@ -117,17 +176,18 @@ class TelegramConfigFlow:
             await self._flow.async_set_unique_id(object_id)
             self._flow._abort_if_unique_id_configured()  # noqa: SLF001
 
+            title_type = "Call" if is_call else "Text Message"
             return self._flow.async_create_entry(
-                title=f"Telegram Text Message {self._recipient}",
+                title=f"Telegram {title_type} {self._recipient}",
                 data={
                     CONF_INTEGRATION_TYPE: INTEGRATION_TELEGRAM,
-                    CONF_MESSAGE_TYPE: MESSAGE_TYPE_TEXT,
+                    CONF_MESSAGE_TYPE: message_type,
                     CONF_RECIPIENT: self._recipient,
                 },
             )
 
         return self._flow.async_show_form(
-            step_id="telegram_text_confirm",
+            step_id=f"telegram_{message_type}_confirm",
             data_schema=vol.Schema({}),
             description_placeholders={"recipient": self._recipient},
             last_step=True,

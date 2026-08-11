@@ -1,4 +1,4 @@
-"""CallMeBot Telegram notify entities."""
+"""CallMeBot Telegram Text Message notify entity."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from custom_components.callmebot.const import CONF_RECIPIENT
 
 from . import text_notify_object_id
 from .api import (
-    CallMeBotTelegramTextAPIError,
-    CallMeBotTelegramTextConnectionError,
+    TelegramTextAPIError,
+    TelegramTextConnectionError,
     async_send_text_message,
 )
 
@@ -48,14 +48,14 @@ class CallMeBotTelegramTextNotifyEntity(NotifyEntity):
                 self._recipient,
                 message,
             )
-        except CallMeBotTelegramTextConnectionError as err:
+        except TelegramTextConnectionError as err:
             error_message = "Unable to reach the CallMeBot Telegram text API"
             _LOGGER.exception(
                 "Unable to reach the CallMeBot Telegram text API for recipient %s",
                 self._recipient,
             )
             raise HomeAssistantError(error_message) from err
-        except CallMeBotTelegramTextAPIError as err:
+        except TelegramTextAPIError as err:
             error_message = "CallMeBot rejected the Telegram text message"
             _LOGGER.exception(
                 "CallMeBot rejected the Telegram text message for recipient %s: %s",
