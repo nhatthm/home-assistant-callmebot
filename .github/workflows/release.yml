@@ -56,24 +56,6 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "filename=$filename" >> "$GITHUB_OUTPUT"
 
-      - name: Extract release notes from changelog
-        if: steps.release.outputs.exists == 'false'
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          set -euo pipefail
-
-          awk -v version="$VERSION" '
-            $0 == "## " version { found=1; next }
-            found && /^## / { exit }
-            found { print }
-          ' CHANGELOG.md > /tmp/release-notes.md
-
-          if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
-            echo "::error::No CHANGELOG.md entry found for $VERSION."
-            exit 1
-          fi
-
       - name: Build integration archive
         if: steps.release.outputs.exists == 'false'
         env:
@@ -105,4 +87,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$VERSION" \
-            --notes-file /tmp/release-notes.md
+            --generate-notes
