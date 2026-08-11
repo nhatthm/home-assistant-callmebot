@@ -68,7 +68,6 @@ class TelegramConfigFlow:
     ) -> ConfigFlowResult:
         """Validate a Telegram Text Message recipient with CallMeBot."""
         errors: dict[str, str] = {}
-        api_error = ""
         recipient = ""
 
         if user_input is not None:
@@ -76,17 +75,16 @@ class TelegramConfigFlow:
             try:
                 recipient = validate_recipient(recipient)
             except vol.Invalid:
-                errors[CONF_RECIPIENT] = "invalid_recipient"
+                errors[CONF_RECIPIENT] = "telegram_text_invalid_recipient"
             else:
                 try:
                     await async_validate_text_recipient(
                         async_get_clientsession(self._flow.hass), recipient
                     )
                 except CallMeBotTelegramTextConnectionError:
-                    errors["base"] = "cannot_connect"
+                    errors["base"] = "telegram_text_cannot_connect"
                 except CallMeBotTelegramTextValidationError as err:
-                    errors["base"] = "api_error"
-                    api_error = str(err)
+                    errors["base"] = err.code.value
                 else:
                     self._recipient = recipient
                     return await self._flow.async_step_telegram_text_confirm()
@@ -101,7 +99,7 @@ class TelegramConfigFlow:
                 }
             ),
             errors=errors,
-            description_placeholders={"api_error": api_error},
+            description_placeholders={"recipient": recipient},
         )
 
     async def async_step_text_confirm(

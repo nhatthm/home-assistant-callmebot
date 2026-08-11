@@ -23,20 +23,13 @@ from custom_components.callmebot.telegram import (
 from custom_components.callmebot.telegram.api import (
     CallMeBotTelegramTextConnectionError,
     CallMeBotTelegramTextValidationError,
+    TelegramTextValidationErrorCode,
 )
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
-
-API_ERROR = """User: sample_user
-Text: This is a test from Callmebot
-HTML format: no
-Preview Links: no
-**Error: Permission denied for sample_user.**
-**Click** [**here**](https://api2.callmebot.com/txt/login.php) **to Authenticate.**
-Telegram Error Code: 400"""
 
 
 async def _advance_to_telegram(hass: HomeAssistant) -> str:
@@ -125,17 +118,21 @@ async def test_invalid_recipient(
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "telegram_text"
-    assert result["errors"] == {CONF_RECIPIENT: "invalid_recipient"}
+    assert result["errors"] == {CONF_RECIPIENT: "telegram_text_invalid_recipient"}
     api_validator.assert_not_awaited()
 
 
 async def test_api_error_is_displayed_in_full(hass: HomeAssistant) -> None:
-    """Test the complete CallMeBot rejection is exposed to the user."""
+    """Test a safe permission error code and recipient are exposed to the UI."""
     flow_id = await _advance_to_telegram(hass)
 
     with patch(
         "custom_components.callmebot.telegram.config_flow.async_validate_text_recipient",
-        new=AsyncMock(side_effect=CallMeBotTelegramTextValidationError(API_ERROR)),
+        new=AsyncMock(
+            side_effect=CallMeBotTelegramTextValidationError(
+                TelegramTextValidationErrorCode.PERMISSION_DENIED
+            )
+        ),
     ):
         result = await hass.config_entries.flow.async_configure(
             flow_id,
@@ -143,13 +140,8 @@ async def test_api_error_is_displayed_in_full(hass: HomeAssistant) -> None:
         )
 
     assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "api_error"}
-    assert result["description_placeholders"] == {"api_error": API_ERROR}
-    assert "Permission denied" in result["description_placeholders"]["api_error"]
-    assert (
-        "[**here**](https://api2.callmebot.com/txt/login.php)"
-        in (result["description_placeholders"]["api_error"])
-    )
+    assert result["errors"] == {"base": "telegram_text_permission_denied"}
+    assert result["description_placeholders"] == {"recipient": "@sample_user"}
 
 
 async def test_connection_error(hass: HomeAssistant) -> None:
@@ -166,7 +158,7 @@ async def test_connection_error(hass: HomeAssistant) -> None:
         )
 
     assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "cannot_connect"}
+    assert result["errors"] == {"base": "telegram_text_cannot_connect"}
 
 
 async def test_existing_entity_aborts_on_submit(hass: HomeAssistant) -> None:

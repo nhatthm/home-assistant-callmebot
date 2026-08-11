@@ -11,7 +11,7 @@ from custom_components.callmebot.telegram import (
 )
 
 
-@pytest.mark.parametrize("recipient", ["@valid_user", "+491234567890"])
+@pytest.mark.parametrize("recipient", ["@valid_user", "+1234567890"])
 def test_valid_recipient(recipient: str) -> None:
     """Test supported Telegram recipient formats."""
     assert validate_recipient(f" {recipient} ") == recipient
@@ -40,6 +40,6 @@ def test_recipient_hash_is_stable_and_case_insensitive() -> None:
 
 def test_text_notify_object_id() -> None:
     """Test deterministic Telegram Text Message entity ID generation."""
-    assert text_notify_object_id("+491234567890") == (
-        "callmebot_telegram_b0492275843c1559_text"
+    assert text_notify_object_id("+1234567890") == (
+        "callmebot_telegram_c775e7b757ede630_text"
     )
