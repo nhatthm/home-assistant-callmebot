@@ -171,16 +171,23 @@ async def test_answered_call_does_not_log_warning(
 
 
 @pytest.mark.parametrize(
-    "api_error",
+    ("api_error", "expected_detail"),
     [
-        TelegramCallConnectionError(),
-        TelegramCallAPIError(TelegramCallAPIErrorCode.API_ERROR),
+        (TelegramCallConnectionError(), "Unable to reach Telegram Call API"),
+        (
+            TelegramCallAPIError(
+                TelegramCallAPIErrorCode.API_ERROR,
+                "Unexpected API response",
+            ),
+            "Unexpected API response",
+        ),
     ],
 )
 async def test_call_error_is_logged_and_raised(
     hass: HomeAssistant,
     caplog: logging.LogCaptureFixture,
     api_error: Exception,
+    expected_detail: str,
 ) -> None:
     """Test Telegram Call failures are logged and fail the service call."""
     entry = MockConfigEntry(
@@ -202,6 +209,7 @@ async def test_call_error_is_logged_and_raised(
         await entity.async_send_message("Sensitive voice message")
 
     assert "@sample_user" in caplog.text
+    assert expected_detail in caplog.text
     assert "Sensitive voice message" not in caplog.text
 
 

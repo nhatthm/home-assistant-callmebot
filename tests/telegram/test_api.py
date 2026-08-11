@@ -1,5 +1,6 @@
 """Unit tests for the CallMeBot Telegram API."""
 
+import logging
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, call, patch
 
@@ -111,6 +112,19 @@ class _Session:
         if self.response is None:
             raise ClientError
         return _RequestContext(self.response)
+
+
+class _SequentialSession(_Session):
+    """Minimal session double returning responses in order."""
+
+    def __init__(self, responses: list[_Response]) -> None:
+        super().__init__()
+        self.responses = responses
+
+    def get(self, url: str, *, params: dict[str, str]) -> _RequestContext:
+        """Record a request and return the next response."""
+        self.calls.append((url, params))
+        return _RequestContext(self.responses.pop(0))
 
 
 def test_format_api_error_response() -> None:
@@ -300,6 +314,43 @@ async def test_send_call_uses_configured_attempts_and_jitter() -> None:
     assert len(session.calls) == 3
 
 
+async def test_send_call_waits_before_successful_retry(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test a rate-limited call waits before a successful retry."""
+    session = _SequentialSession(
+        [
+            _Response(200, CALL_RATE_LIMIT_RESPONSE),
+            _Response(200, CALL_ANSWERED_RESPONSE),
+        ]
+    )
+
+    with (
+        patch(
+            "custom_components.callmebot.telegram.api.asyncio.sleep",
+            new=AsyncMock(),
+        ) as sleep,
+        patch(
+            "custom_components.callmebot.telegram.api.random.uniform",
+            return_value=0.5,
+        ),
+        caplog.at_level(logging.WARNING),
+    ):
+        result = await async_send_call(
+            session,  # type: ignore[arg-type]
+            "@sample_user",
+            "Voice message",
+        )
+
+    assert result is TelegramCallResult.ANSWERED
+    sleep.assert_awaited_once_with(42.5)
+    assert len(session.calls) == 2
+    assert (
+        "Telegram Call rate limited for @sample_user; retrying in 42.50 seconds "
+        "(attempt 2/2)"
+    ) in caplog.messages
+
+
 @pytest.mark.parametrize(
     ("response", "expected_code"),
     [
@@ -325,6 +376,7 @@ async def test_send_call_api_error(
         )
 
     assert error.value.code is expected_code
+    assert error.value.response == response
     assert "Unexpected response" not in str(error.value)
 
 
