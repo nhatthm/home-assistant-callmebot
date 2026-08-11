@@ -18,7 +18,7 @@
       },
       "telegram_text": {
         "title": "Configure Telegram text messages",
-        "description": "Enter `@<username>` or a full international phone number such as `+1234567890`. A test message will be sent to validate access.",
+        "description": "Enter a Telegram username beginning with `@` or a full international phone number such as `+1234567890`. A test message will be sent to validate access. If CallMeBot reports permission denied, [authenticate the Telegram recipient](https://api2.callmebot.com/txt/login.php) and try again.",
         "data": {
           "recipient": "Username or phone number"
         }
@@ -31,8 +31,8 @@
     "error": {
       "telegram_text_api_error": "The CallMeBot Telegram text API rejected the request.",
       "telegram_text_cannot_connect": "Unable to connect to the CallMeBot Telegram text API. Please try again.",
-      "telegram_text_invalid_recipient": "Enter `@<username>` or a full phone number with country code, such as `+1234567890`.",
-      "telegram_text_permission_denied": "**Error: Permission denied for {recipient}. You need to authorize CallMeBot to contact this Telegram user ({recipient}).**\n\n**Click** [**here**](https://api2.callmebot.com/txt/login.php) **to Authenticate {recipient} and then try again.**"
+      "telegram_text_invalid_recipient": "Enter a Telegram username beginning with `@` or a full phone number with country code, such as `+1234567890`.",
+      "telegram_text_permission_denied": "Permission denied for {recipient}. Authorize CallMeBot using the authentication link above and try again."
     },
     "abort": {
       "already_configured": "This CallMeBot notify entity is already configured.",

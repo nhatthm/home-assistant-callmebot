@@ -32,14 +32,26 @@ async def test_config_flow_field_translations(hass: HomeAssistant) -> None:
         ]
         == "Message Type"
     )
+    assert translations[
+        "component.callmebot.config.step.telegram_text.description"
+    ] == (
+        "Enter a Telegram username beginning with `@` or a full international phone "
+        "number such as `+1234567890`. A test message will be sent to validate access. "
+        "If CallMeBot reports permission denied, [authenticate the Telegram recipient]"
+        "(https://api2.callmebot.com/txt/login.php) and try again."
+    )
+    assert (
+        "<username>"
+        not in translations[
+            "component.callmebot.config.error.telegram_text_invalid_recipient"
+        ]
+    )
     assert translations["component.callmebot.config.error.telegram_text_api_error"] == (
         "The CallMeBot Telegram text API rejected the request."
     )
     assert translations[
         "component.callmebot.config.error.telegram_text_permission_denied"
     ] == (
-        "**Error: Permission denied for {recipient}. You need to authorize CallMeBot "
-        "to contact this Telegram user ({recipient}).**\n\n**Click** "
-        "[**here**](https://api2.callmebot.com/txt/login.php) **to Authenticate "
-        "{recipient} and then try again.**"
+        "Permission denied for {recipient}. Authorize CallMeBot using the "
+        "authentication link above and try again."
     )
