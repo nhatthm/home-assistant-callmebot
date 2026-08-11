@@ -1,0 +1,19 @@
+README.md
+  s_251bb1910bc1ca::t_f889ce9c5bc28b 1-7,9-11,13-27,31-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "da48992f6c7cd44f8f7e01684700f40d7fcf6f57",
+  "prompts": {},
+  "sessions": {
+    "s_251bb1910bc1ca": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "e3b2e2a1-cf34-4819-a94c-6b4b874db0c3",
+        "model": "gemini-3.5-flash"
+      },
+      "human_author": "nhatthm <thmnhat@gmail.com>"
+    }
+  }
+}
