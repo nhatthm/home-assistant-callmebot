@@ -7,5 +7,5 @@
   "integration_type": "service",
   "issue_tracker": "https://github.com/nhatthm/home-assistant-callmebot/issues",
   "requirements": [],
-  "version": "0.2.4"
+  "version": "0.2.5"
 }
