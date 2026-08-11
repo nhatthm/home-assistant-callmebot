@@ -11,9 +11,10 @@ from custom_components.callmebot.telegram import (
     TEXT_VALIDATION_MESSAGE,
 )
 from custom_components.callmebot.telegram.api import (
+    CallMeBotTelegramTextAPIError,
     CallMeBotTelegramTextConnectionError,
-    CallMeBotTelegramTextValidationError,
-    TelegramTextValidationErrorCode,
+    TelegramTextAPIErrorCode,
+    async_send_text_message,
     async_validate_text_recipient,
     format_api_response,
     is_successful_response,
@@ -136,30 +137,48 @@ async def test_validate_recipient_success() -> None:
     ]
 
 
+async def test_send_text_message_success() -> None:
+    """Test sending the supplied Telegram text message."""
+    session = _Session(_Response(200, SUCCESS_RESPONSE))
+
+    await async_send_text_message(
+        session,  # type: ignore[arg-type]
+        "@sample_user",
+        "Actual notification",
+    )
+
+    assert session.calls == [
+        (
+            TEXT_API_URL,
+            {"user": "@sample_user", "text": "Actual notification"},
+        )
+    ]
+
+
 async def test_validate_recipient_rejection() -> None:
     """Test an API rejection includes the complete formatted response."""
     session = _Session(_Response(400, ERROR_RESPONSE))
 
-    with pytest.raises(CallMeBotTelegramTextValidationError) as error:
+    with pytest.raises(CallMeBotTelegramTextAPIError) as error:
         await async_validate_text_recipient(
             session,
             "@sample_user",  # type: ignore[arg-type]
         )
 
-    assert error.value.code is TelegramTextValidationErrorCode.PERMISSION_DENIED
+    assert error.value.code is TelegramTextAPIErrorCode.PERMISSION_DENIED
 
 
 async def test_validate_recipient_unknown_rejection() -> None:
     """Test an unknown API response only exposes a safe error code."""
     session = _Session(_Response(400, "Unexpected **untrusted** response"))
 
-    with pytest.raises(CallMeBotTelegramTextValidationError) as error:
+    with pytest.raises(CallMeBotTelegramTextAPIError) as error:
         await async_validate_text_recipient(
             session,
             "@sample_user",  # type: ignore[arg-type]
         )
 
-    assert error.value.code is TelegramTextValidationErrorCode.API_ERROR
+    assert error.value.code is TelegramTextAPIErrorCode.API_ERROR
     assert "untrusted" not in str(error.value)
 
 

@@ -18,8 +18,8 @@ from custom_components.callmebot.const import (
 
 from . import MESSAGE_TYPE_TEXT, text_notify_object_id, validate_recipient
 from .api import (
+    CallMeBotTelegramTextAPIError,
     CallMeBotTelegramTextConnectionError,
-    CallMeBotTelegramTextValidationError,
     async_validate_text_recipient,
 )
 
@@ -83,7 +83,7 @@ class TelegramConfigFlow:
                     )
                 except CallMeBotTelegramTextConnectionError:
                     errors["base"] = "telegram_text_cannot_connect"
-                except CallMeBotTelegramTextValidationError as err:
+                except CallMeBotTelegramTextAPIError as err:
                     errors["base"] = err.code.value
                 else:
                     self._recipient = recipient

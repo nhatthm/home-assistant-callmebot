@@ -6,10 +6,17 @@ import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components.notify import NotifyEntity
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from custom_components.callmebot.const import CONF_RECIPIENT
 
 from . import text_notify_object_id
+from .api import (
+    CallMeBotTelegramTextAPIError,
+    CallMeBotTelegramTextConnectionError,
+    async_send_text_message,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -33,6 +40,26 @@ class CallMeBotTelegramTextNotifyEntity(NotifyEntity):
         self._attr_unique_id = object_id
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
-        """Log a placeholder until Telegram message delivery is implemented."""
+        """Send a Telegram text message through CallMeBot."""
         del title
-        _LOGGER.info("Recipient: %s; Message: %s", self._recipient, message)
+        try:
+            await async_send_text_message(
+                async_get_clientsession(self.hass),
+                self._recipient,
+                message,
+            )
+        except CallMeBotTelegramTextConnectionError as err:
+            error_message = "Unable to reach the CallMeBot Telegram text API"
+            _LOGGER.exception(
+                "Unable to reach the CallMeBot Telegram text API for recipient %s",
+                self._recipient,
+            )
+            raise HomeAssistantError(error_message) from err
+        except CallMeBotTelegramTextAPIError as err:
+            error_message = "CallMeBot rejected the Telegram text message"
+            _LOGGER.exception(
+                "CallMeBot rejected the Telegram text message for recipient %s: %s",
+                self._recipient,
+                err.code.value,
+            )
+            raise HomeAssistantError(error_message) from err

@@ -16,26 +16,26 @@ from . import TEXT_API_URL, TEXT_VALIDATION_MESSAGE
 API_TIMEOUT_SECONDS = 10
 
 
-class TelegramTextValidationErrorCode(StrEnum):
-    """Safe translation keys for Telegram Text Message validation errors."""
+class TelegramTextAPIErrorCode(StrEnum):
+    """Safe error codes for Telegram Text Message API errors."""
 
     API_ERROR = "telegram_text_api_error"
     PERMISSION_DENIED = "telegram_text_permission_denied"
 
 
 class CallMeBotTelegramTextError(Exception):
-    """Base exception for CallMeBot Telegram Text Message API validation."""
+    """Base exception for the CallMeBot Telegram Text Message API."""
 
 
 class CallMeBotTelegramTextConnectionError(CallMeBotTelegramTextError):
     """Raised when the Telegram Text Message API cannot be reached."""
 
 
-class CallMeBotTelegramTextValidationError(CallMeBotTelegramTextError):
-    """Raised when CallMeBot rejects a Telegram Text Message recipient."""
+class CallMeBotTelegramTextAPIError(CallMeBotTelegramTextError):
+    """Raised when CallMeBot rejects a Telegram Text Message request."""
 
-    def __init__(self, code: TelegramTextValidationErrorCode) -> None:
-        """Initialize a safe validation error code."""
+    def __init__(self, code: TelegramTextAPIErrorCode) -> None:
+        """Initialize a safe API error code."""
         super().__init__(code)
         self.code = code
 
@@ -114,13 +114,17 @@ def is_successful_response(status: int, response: str) -> bool:
     return bool(telegram_codes) and all(code == "200" for code in telegram_codes)
 
 
-async def async_validate_text_recipient(session: ClientSession, recipient: str) -> None:
-    """Send a Telegram Text Message test and raise when CallMeBot rejects it."""
+async def async_send_text_message(
+    session: ClientSession,
+    recipient: str,
+    message: str,
+) -> None:
+    """Send a Telegram Text Message and raise when CallMeBot rejects it."""
     try:
         async with asyncio.timeout(API_TIMEOUT_SECONDS):
             async with session.get(
                 TEXT_API_URL,
-                params={"user": recipient, "text": TEXT_VALIDATION_MESSAGE},
+                params={"user": recipient, "text": message},
             ) as response:
                 response_text = await response.text()
                 status = response.status
@@ -130,8 +134,13 @@ async def async_validate_text_recipient(session: ClientSession, recipient: str) 
     if not is_successful_response(status, response_text):
         formatted_response = format_api_response(response_text)
         code = (
-            TelegramTextValidationErrorCode.PERMISSION_DENIED
+            TelegramTextAPIErrorCode.PERMISSION_DENIED
             if re.search("permission denied", formatted_response, flags=re.IGNORECASE)
-            else TelegramTextValidationErrorCode.API_ERROR
+            else TelegramTextAPIErrorCode.API_ERROR
         )
-        raise CallMeBotTelegramTextValidationError(code)
+        raise CallMeBotTelegramTextAPIError(code)
+
+
+async def async_validate_text_recipient(session: ClientSession, recipient: str) -> None:
+    """Send a Telegram Text Message test and raise when CallMeBot rejects it."""
+    await async_send_text_message(session, recipient, TEXT_VALIDATION_MESSAGE)
