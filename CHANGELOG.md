@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+* Fix Telegram text translation rendering by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/16
+* Fix Telegram text entity name by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/17
+
 ## 0.2.1
 
 * Fix config flow translations by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/14
