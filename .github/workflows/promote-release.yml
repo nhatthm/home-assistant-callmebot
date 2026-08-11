@@ -48,12 +48,7 @@ jobs:
 
           previous_version="$latest_version"
           if [[ -z "$latest_version" ]]; then
-            latest_version=$(jq -r '.version' custom_components/callmebot/manifest.json)
-          fi
-
-          if [[ ! "$latest_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Current version '$latest_version' must use X.Y.Z without a v prefix."
-            exit 1
+            latest_version="0.0.0"
           fi
 
           IFS=. read -r major minor patch <<< "$latest_version"
@@ -106,20 +101,17 @@ jobs:
           VERSION: ${{ steps.version.outputs.new_version }}
         run: |
           python3 - <<'PY'
+          import json
           import os
-          import re
           from pathlib import Path
 
           path = Path("custom_components/callmebot/manifest.json")
-          content = path.read_text(encoding="utf-8")
-          updated, replacements = re.subn(
-              r'("version"\s*:\s*")[^"]+(")',
-              lambda match: f'{match.group(1)}{os.environ["VERSION"]}{match.group(2)}',
-              content,
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          manifest["version"] = os.environ["VERSION"]
+          path.write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
           )
-          if replacements != 1:
-              raise SystemExit(f"Expected one version field, found {replacements}")
-          path.write_text(updated, encoding="utf-8")
           PY
 
       - name: Generate release notes
