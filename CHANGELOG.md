@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+* Fix config flow translations by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/14
+
 ## 0.2.0
 
 * Add CallMeBot brand icon by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/9
