@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+* Add CallMeBot brand icon by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/9
+* Fix generated release files by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/12
+* Refresh CallMeBot brand icon by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/11
+* Add Telegram text notify configuration by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/10
+
 ## 0.1.0
 
 * Add automated release workflows by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/1
