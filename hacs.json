@@ -1,3 +1,5 @@
 {
-  "name": "CallMeBot API"
+  "name": "CallMeBot API",
+  "zip_release": true,
+  "filename": "callmebot.zip"
 }

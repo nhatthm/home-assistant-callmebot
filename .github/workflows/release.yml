@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - custom_components/callmebot/manifest.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: callmebot-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read release metadata
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          version=$(jq -r '.version' custom_components/callmebot/manifest.json)
+          filename=$(jq -r '.filename' hacs.json)
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Manifest version '$version' must use X.Y.Z without a v prefix."
+            exit 1
+          fi
+          if [[ -z "$filename" || "$filename" == "null" ]]; then
+            echo "::error::hacs.json does not define filename."
+            exit 1
+          fi
+
+          if gh release view "$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $version already exists; nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "filename=$filename" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from changelog
+        if: steps.release.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          awk -v version="$VERSION" '
+            $0 == "## " version { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/release-notes.md
+
+          if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
+            echo "::error::No CHANGELOG.md entry found for $VERSION."
+            exit 1
+          fi
+
+      - name: Build integration archive
+        if: steps.release.outputs.exists == 'false'
+        env:
+          FILENAME: ${{ steps.release.outputs.filename }}
+        run: |
+          set -euo pipefail
+
+          cd custom_components/callmebot
+          zip -r "../../$FILENAME" . \
+            -x '__pycache__/*' '*/__pycache__/*' '*.pyc'
+          cd ../..
+
+          archive_root=$(zipinfo -1 "$FILENAME" | sed -n '1p')
+          if [[ "$archive_root" == custom_components/* || "$archive_root" == callmebot/* ]]; then
+            echo "::error::Integration files must be located at the root of $FILENAME."
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        if: steps.release.outputs.exists == 'false'
+        env:
+          FILENAME: ${{ steps.release.outputs.filename }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          gh release create "$VERSION" "$FILENAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --notes-file /tmp/release-notes.md

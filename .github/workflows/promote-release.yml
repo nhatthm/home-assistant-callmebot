@@ -1,0 +1,197 @@
+name: Promote Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: Version part to bump
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: callmebot-release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Prepare release pull request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: version
+        env:
+          BUMP_TYPE: ${{ inputs.bump_type }}
+        run: |
+          set -euo pipefail
+
+          latest_version=$(
+            git tag --list \
+              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1 \
+              || true
+          )
+
+          previous_version="$latest_version"
+          if [[ -z "$latest_version" ]]; then
+            latest_version="0.1.0"
+          fi
+
+          IFS=. read -r major minor patch <<< "$latest_version"
+          case "$BUMP_TYPE" in
+            major)
+              new_version="$((major + 1)).0.0"
+              ;;
+            minor)
+              new_version="${major}.$((minor + 1)).0"
+              ;;
+            patch)
+              new_version="${major}.${minor}.$((patch + 1))"
+              ;;
+            *)
+              echo "::error::Unsupported bump type: $BUMP_TYPE"
+              exit 1
+              ;;
+          esac
+
+          if git rev-parse -q --verify "refs/tags/$new_version" >/dev/null; then
+            echo "::error::Tag $new_version already exists."
+            exit 1
+          fi
+
+          echo "previous_version=$previous_version" >> "$GITHUB_OUTPUT"
+          echo "new_version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "Next version: $new_version"
+
+      - name: Check for an existing release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          existing_pr=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --head "release/$VERSION" \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [[ -n "$existing_pr" ]]; then
+            echo "::error::Release pull request #$existing_pr already exists for $VERSION."
+            exit 1
+          fi
+
+      - name: Update manifest version
+        env:
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("custom_components/callmebot/manifest.json")
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          manifest["version"] = os.environ["VERSION"]
+          path.write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_VERSION: ${{ steps.version.outputs.previous_version }}
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          api_args=(
+            --method POST
+            "repos/$GITHUB_REPOSITORY/releases/generate-notes"
+            -f "tag_name=$VERSION"
+            -f "target_commitish=${{ github.event.repository.default_branch }}"
+          )
+          if [[ -n "$PREVIOUS_VERSION" ]]; then
+            api_args+=(-f "previous_tag_name=$PREVIOUS_VERSION")
+          fi
+
+          gh api "${api_args[@]}" --jq '.body' > /tmp/release-notes.md
+          if [[ ! -s /tmp/release-notes.md ]]; then
+            echo "::error::GitHub generated empty release notes."
+            exit 1
+          fi
+
+      - name: Update changelog
+        env:
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          if [[ -f CHANGELOG.md ]] && grep -Fqx "## $VERSION" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md already contains version $VERSION."
+            exit 1
+          fi
+
+          {
+            echo "# Changelog"
+            echo
+            echo "## $VERSION"
+            echo
+            cat /tmp/release-notes.md
+            if [[ -f CHANGELOG.md ]]; then
+              echo
+              sed '1{/^# Changelog$/d;}' CHANGELOG.md | sed '1{/^$/d;}'
+            fi
+          } > /tmp/CHANGELOG.md
+          mv /tmp/CHANGELOG.md CHANGELOG.md
+
+      - name: Create release label when needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh label view release --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh label create release \
+              --repo "$GITHUB_REPOSITORY" \
+              --color "0E8A16" \
+              --description "Release preparation"
+          fi
+
+      - name: Create release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.new_version }}
+        run: |
+          set -euo pipefail
+
+          branch="release/$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add custom_components/callmebot/manifest.json CHANGELOG.md
+          git commit -m "Prepare release $VERSION"
+          git push origin "$branch"
+
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$branch" \
+            --title "Prepare release $VERSION" \
+            --body "Bump CallMeBot API to $VERSION and add its generated release notes." \
+            --label release
