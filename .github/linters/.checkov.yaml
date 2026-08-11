@@ -1,0 +1,3 @@
+# The release promotion accepts only a constrained semantic-version bump choice.
+skip-check:
+  - CKV_GHA_7

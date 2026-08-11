@@ -95,7 +95,9 @@ jobs:
             --jq '.[0].number // empty')
 
           if [[ -n "$existing_pr" ]]; then
-            echo "::error::Release pull request #$existing_pr already exists for $VERSION."
+            printf \
+              '::error::Release pull request #%s already exists for %s.\n' \
+              "$existing_pr" "$VERSION"
             exit 1
           fi
 
@@ -221,12 +223,14 @@ jobs:
           git push origin "$branch"
           echo "branch_pushed=true" >> "$GITHUB_OUTPUT"
 
+          body="Bump CallMeBot API to $VERSION"
+          body+=" and add its generated release notes."
           gh pr create \
             --repo "$GITHUB_REPOSITORY" \
             --base "$DEFAULT_BRANCH" \
             --head "$branch" \
             --title "Prepare release $VERSION" \
-            --body "Bump CallMeBot API to $VERSION and add its generated release notes." \
+            --body "$body" \
             --label release
 
       - name: Clean up release branch after failure

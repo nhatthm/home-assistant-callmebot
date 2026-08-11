@@ -37,7 +37,8 @@ jobs:
           filename=$(jq -r '.filename' hacs.json)
 
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Manifest version '$version' must use X.Y.Z without a v prefix."
+            echo "::error::Manifest version '$version' must use X.Y.Z" \
+              "without a v prefix."
             exit 1
           fi
           if [[ -z "$filename" || "$filename" == "null" ]]; then
@@ -46,9 +47,12 @@ jobs:
           fi
 
           if [[ "$version" == "0.0.0" ]]; then
-            echo "Version 0.0.0 is the development placeholder; nothing to release."
+            echo "Version 0.0.0 is the development placeholder;" \
+              "nothing to release."
             echo "exists=true" >> "$GITHUB_OUTPUT"
-          elif gh release view "$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          elif gh release view \
+            "$version" \
+            --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $version already exists; nothing to do."
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -71,8 +75,10 @@ jobs:
           cd ../..
 
           archive_root=$(zipinfo -1 "$FILENAME" | sed -n '1p')
-          if [[ "$archive_root" == custom_components/* || "$archive_root" == callmebot/* ]]; then
-            echo "::error::Integration files must be located at the root of $FILENAME."
+          if [[ "$archive_root" == custom_components/* ]] \
+            || [[ "$archive_root" == callmebot/* ]]; then
+            echo "::error::Integration files must be located at the root" \
+              "of $FILENAME."
             exit 1
           fi
 
