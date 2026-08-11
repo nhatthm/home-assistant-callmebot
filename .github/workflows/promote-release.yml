@@ -110,12 +110,19 @@ jobs:
           from pathlib import Path
 
           path = Path("custom_components/callmebot/manifest.json")
-          manifest = json.loads(path.read_text(encoding="utf-8"))
-          manifest["version"] = os.environ["VERSION"]
-          path.write_text(
-              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-              encoding="utf-8",
-          )
+          content = path.read_text(encoding="utf-8")
+          manifest = json.loads(content)
+          old_version = manifest["version"]
+          version_line = f'  "version": "{old_version}"'
+          replacement = f'  "version": "{os.environ["VERSION"]}"'
+
+          if content.count(version_line) != 1:
+              msg = "Could not identify exactly one manifest version line."
+              raise RuntimeError(msg)
+
+          updated = content.replace(version_line, replacement)
+          json.loads(updated)
+          path.write_text(updated, encoding="utf-8")
           PY
 
       - name: Generate release notes
@@ -139,11 +146,22 @@ jobs:
 
           gh api "${api_args[@]}" --jq '.body' > /tmp/generated-release-notes.md
           python3 - <<'PY'
+          import re
+          import textwrap
           from pathlib import Path
 
           source = Path("/tmp/generated-release-notes.md")
           filtered: list[str] = []
+          references: dict[str, str] = {}
           skip_new_contributors = False
+          pull_request_url = re.compile(
+              r"https://github\.com/[^/]+/[^/]+/pull/(?P<number>\d+)"
+          )
+
+          def replace_pull_request_url(match: re.Match[str]) -> str:
+              number = match.group("number")
+              references[number] = match.group(0)
+              return f"[#{number}][pr-{number}]"
 
           for line in source.read_text(encoding="utf-8").splitlines():
               if line == "## What's Changed":
@@ -157,9 +175,28 @@ jobs:
                   continue
               if line.startswith("**Full Changelog**:"):
                   continue
+              if line.startswith("* "):
+                  line = f"- {line[2:]}"
+
+              line = pull_request_url.sub(replace_pull_request_url, line)
+              if line.startswith("- "):
+                  line = textwrap.fill(
+                      line,
+                      width=88,
+                      subsequent_indent="  ",
+                      break_long_words=False,
+                      break_on_hyphens=False,
+                  )
               filtered.append(line)
 
           notes = "\n".join(filtered).strip()
+          if references:
+              reference_lines = [
+                  f"[pr-{number}]: {url}"
+                  for number, url in references.items()
+              ]
+              references_text = "\n".join(reference_lines)
+              notes = f"{notes}\n\n{references_text}"
           Path("/tmp/release-notes.md").write_text(notes + "\n", encoding="utf-8")
           PY
           if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
