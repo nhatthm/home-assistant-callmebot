@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5
+
+<!-- Release notes generated using configuration in .github/release.yml at master -->
+
+* Log Telegram Call API responses by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/24
+* Add complete Home Assistant brand assets by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/26
+
 ## 0.2.4
 
 <!-- Release notes generated using configuration in .github/release.yml at master -->
