@@ -1,0 +1,52 @@
+name: Lint
+
+on:
+  pull_request:
+    paths-ignore:
+      - custom_components/callmebot/manifest.json
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - custom_components/callmebot/manifest.json
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run Super-Linter
+        uses: super-linter/super-linter/slim@v8.7.0
+        env:
+          DEFAULT_BRANCH: master
+          FILTER_REGEX_EXCLUDE: .*\.py$
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true
+          VALIDATE_PYTHON: false
+          VALIDATE_PYTHON_BLACK: false
+          VALIDATE_PYTHON_FLAKE8: false
+          VALIDATE_PYTHON_ISORT: false
+          VALIDATE_PYTHON_MYPY: false
+          VALIDATE_PYTHON_PYLINT: false
+          VALIDATE_PYTHON_RUFF: false
+          VALIDATE_PYTHON_RUFF_FORMAT: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Install Ruff
+        run: python -m pip install ruff==0.16.2
+
+      - name: Run Ruff
+        run: make lint-python
