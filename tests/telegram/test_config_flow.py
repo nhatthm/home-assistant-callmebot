@@ -21,9 +21,9 @@ from custom_components.callmebot.telegram import (
     text_notify_object_id,
 )
 from custom_components.callmebot.telegram.api import (
+    CallMeBotTelegramTextAPIError,
     CallMeBotTelegramTextConnectionError,
-    CallMeBotTelegramTextValidationError,
-    TelegramTextValidationErrorCode,
+    TelegramTextAPIErrorCode,
 )
 
 if TYPE_CHECKING:
@@ -129,8 +129,8 @@ async def test_api_error_is_displayed_in_full(hass: HomeAssistant) -> None:
     with patch(
         "custom_components.callmebot.telegram.config_flow.async_validate_text_recipient",
         new=AsyncMock(
-            side_effect=CallMeBotTelegramTextValidationError(
-                TelegramTextValidationErrorCode.PERMISSION_DENIED
+            side_effect=CallMeBotTelegramTextAPIError(
+                TelegramTextAPIErrorCode.PERMISSION_DENIED
             )
         ),
     ):
