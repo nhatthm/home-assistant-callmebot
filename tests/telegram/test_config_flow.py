@@ -102,7 +102,10 @@ async def test_call_flow_creates_entry(hass: HomeAssistant) -> None:
             "telegram_call_cannot_connect",
         ),
         (
-            TelegramCallAPIError(TelegramCallAPIErrorCode.PERMISSION_DENIED),
+            TelegramCallAPIError(
+                TelegramCallAPIErrorCode.PERMISSION_DENIED,
+                "Authorization was not received.",
+            ),
             "telegram_call_permission_denied",
         ),
     ],

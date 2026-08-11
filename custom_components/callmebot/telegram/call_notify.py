@@ -52,7 +52,10 @@ class CallMeBotTelegramCallNotifyEntity(NotifyEntity):
             raise HomeAssistantError(type(err).__name__) from err
         except TelegramCallAPIError as err:
             _LOGGER.exception(
-                "Telegram Call failed for %s: %s", self._recipient, err.code
+                "Telegram Call failed for %s (%s):\n%s",
+                self._recipient,
+                err.code.value,
+                err.response,
             )
             raise HomeAssistantError(err.code.value) from err
         if result is TelegramCallResult.REJECTED:

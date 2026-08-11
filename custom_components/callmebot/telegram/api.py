@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import random
 import re
 from enum import StrEnum
@@ -19,6 +20,8 @@ API_TIMEOUT_SECONDS_CALL = 60
 API_MAX_ATTEMPTS_CALL = 2
 API_RATE_LIMIT_DELAY_SECONDS_CALL = 65
 API_RATE_LIMIT_JITTER_SECONDS_CALL = 1.0
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class TelegramTextAPIErrorCode(StrEnum):
@@ -79,10 +82,11 @@ class TelegramCallConnectionError(TelegramCallError):
 class TelegramCallAPIError(TelegramCallError):
     """Raised when CallMeBot rejects a Telegram Call request."""
 
-    def __init__(self, code: TelegramCallAPIErrorCode) -> None:
-        """Initialize a safe API error code."""
+    def __init__(self, code: TelegramCallAPIErrorCode, response: str) -> None:
+        """Initialize a safe API error code and readable API response."""
         super().__init__(code)
         self.code = code
+        self.response = format_api_response(response)
 
 
 class _ResponseTextParser(HTMLParser):
@@ -249,11 +253,23 @@ async def async_send_call(
                     0,
                     API_RATE_LIMIT_JITTER_SECONDS_CALL,
                 )
-                await asyncio.sleep(result.retry_after + jitter)
+                retry_delay = result.retry_after + jitter
+                _LOGGER.warning(
+                    "Telegram Call rate limited for %s; retrying in %.2f seconds "
+                    "(attempt %d/%d)",
+                    recipient,
+                    retry_delay,
+                    attempt + 1,
+                    max_attempts,
+                )
+                await asyncio.sleep(retry_delay)
                 attempt += 1
                 continue
-            raise TelegramCallAPIError(TelegramCallAPIErrorCode.RATE_LIMITED)
-        raise TelegramCallAPIError(result)
+            raise TelegramCallAPIError(
+                TelegramCallAPIErrorCode.RATE_LIMITED,
+                response_text,
+            )
+        raise TelegramCallAPIError(result, response_text)
 
 
 async def async_validate_call_recipient(
