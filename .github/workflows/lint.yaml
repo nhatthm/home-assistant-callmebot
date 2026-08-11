@@ -32,7 +32,7 @@ jobs:
         uses: super-linter/super-linter/slim@4ce20838b8ab83717e78138c5b3a1407148e0918
         env:
           DEFAULT_BRANCH: master
-          FILTER_REGEX_EXCLUDE: .*\.py$
+          FILTER_REGEX_EXCLUDE: .*(\.py$|/CHANGELOG\.md$)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_BIOME_FORMAT: false

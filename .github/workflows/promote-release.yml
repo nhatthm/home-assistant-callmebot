@@ -110,12 +110,19 @@ jobs:
           from pathlib import Path
 
           path = Path("custom_components/callmebot/manifest.json")
-          manifest = json.loads(path.read_text(encoding="utf-8"))
-          manifest["version"] = os.environ["VERSION"]
-          path.write_text(
-              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-              encoding="utf-8",
-          )
+          content = path.read_text(encoding="utf-8")
+          manifest = json.loads(content)
+          old_version = manifest["version"]
+          version_line = f'  "version": "{old_version}"'
+          replacement = f'  "version": "{os.environ["VERSION"]}"'
+
+          if content.count(version_line) != 1:
+              msg = "Could not identify exactly one manifest version line."
+              raise RuntimeError(msg)
+
+          updated = content.replace(version_line, replacement)
+          json.loads(updated)
+          path.write_text(updated, encoding="utf-8")
           PY
 
       - name: Generate release notes
