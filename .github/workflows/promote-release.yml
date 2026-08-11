@@ -48,7 +48,12 @@ jobs:
 
           previous_version="$latest_version"
           if [[ -z "$latest_version" ]]; then
-            latest_version="0.1.0"
+            latest_version=$(jq -r '.version' custom_components/callmebot/manifest.json)
+          fi
+
+          if [[ ! "$latest_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Current version '$latest_version' must use X.Y.Z without a v prefix."
+            exit 1
           fi
 
           IFS=. read -r major minor patch <<< "$latest_version"
@@ -101,17 +106,20 @@ jobs:
           VERSION: ${{ steps.version.outputs.new_version }}
         run: |
           python3 - <<'PY'
-          import json
           import os
+          import re
           from pathlib import Path
 
           path = Path("custom_components/callmebot/manifest.json")
-          manifest = json.loads(path.read_text(encoding="utf-8"))
-          manifest["version"] = os.environ["VERSION"]
-          path.write_text(
-              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-              encoding="utf-8",
+          content = path.read_text(encoding="utf-8")
+          updated, replacements = re.subn(
+              r'("version"\s*:\s*")[^"]+(")',
+              lambda match: f'{match.group(1)}{os.environ["VERSION"]}{match.group(2)}',
+              content,
           )
+          if replacements != 1:
+              raise SystemExit(f"Expected one version field, found {replacements}")
+          path.write_text(updated, encoding="utf-8")
           PY
 
       - name: Generate release notes
@@ -132,8 +140,32 @@ jobs:
             api_args+=(-f "previous_tag_name=$PREVIOUS_VERSION")
           fi
 
-          gh api "${api_args[@]}" --jq '.body' > /tmp/release-notes.md
-          if [[ ! -s /tmp/release-notes.md ]]; then
+          gh api "${api_args[@]}" --jq '.body' > /tmp/generated-release-notes.md
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path("/tmp/generated-release-notes.md")
+          filtered: list[str] = []
+          skip_new_contributors = False
+
+          for line in source.read_text(encoding="utf-8").splitlines():
+              if line == "## What's Changed":
+                  continue
+              if line == "## New Contributors":
+                  skip_new_contributors = True
+                  continue
+              if skip_new_contributors and line.startswith("## "):
+                  skip_new_contributors = False
+              if skip_new_contributors:
+                  continue
+              if line.startswith("**Full Changelog**:"):
+                  continue
+              filtered.append(line)
+
+          notes = "\n".join(filtered).strip()
+          Path("/tmp/release-notes.md").write_text(notes + "\n", encoding="utf-8")
+          PY
+          if ! grep -q '[^[:space:]]' /tmp/release-notes.md; then
             echo "::error::GitHub generated empty release notes."
             exit 1
           fi
