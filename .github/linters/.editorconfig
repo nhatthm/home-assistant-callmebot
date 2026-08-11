@@ -12,6 +12,9 @@ max_line_length = 88
 [*.{json,yaml,yml}]
 indent_size = 2
 
+[custom_components/callmebot/{strings.json,translations/*.json}]
+max_line_length = off
+
 [Makefile]
 indent_style = tab
 indent_size = 4

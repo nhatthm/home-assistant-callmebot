@@ -1,8 +1,41 @@
 {
   "title": "CallMeBot API",
   "config": {
+    "step": {
+      "user": {
+        "title": "Choose integration type",
+        "description": "Select the CallMeBot integration to configure.",
+        "data": {
+          "integration_type": "Integration type"
+        }
+      },
+      "telegram_message_type": {
+        "title": "Choose message type",
+        "description": "Select the Telegram message type.",
+        "data": {
+          "message_type": "Message type"
+        }
+      },
+      "telegram_text": {
+        "title": "Configure Telegram text messages",
+        "description": "Enter `@<username>` or a full international phone number such as `+491234567890`. A test message will be sent to validate access.\n\n{api_error}",
+        "data": {
+          "recipient": "Username or phone number"
+        }
+      },
+      "telegram_text_confirm": {
+        "title": "Create Telegram notify entity",
+        "description": "CallMeBot accepted the test message for `{recipient}`. Submit to create the notify entity."
+      }
+    },
+    "error": {
+      "api_error": "CallMeBot rejected this recipient. Follow the complete response above and try again.",
+      "cannot_connect": "Unable to connect to CallMeBot. Please try again.",
+      "invalid_recipient": "Enter `@<username>` or a full phone number with country code, such as `+491234567890`."
+    },
     "abort": {
-      "already_configured": "CallMeBot API is already configured."
+      "already_configured": "This CallMeBot notify entity is already configured.",
+      "entity_already_exists": "The requested notify entity already exists."
     }
   }
 }

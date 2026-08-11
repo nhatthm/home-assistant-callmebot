@@ -1,0 +1,4 @@
+{
+  "ignore": ["**/custom_components/callmebot/translations/*.json"],
+  "threshold": 0
+}
