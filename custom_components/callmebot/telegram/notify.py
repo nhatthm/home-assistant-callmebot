@@ -29,7 +29,7 @@ class CallMeBotTelegramTextNotifyEntity(NotifyEntity):
 
         self._recipient = recipient
         self.entity_id = f"notify.{object_id}"
-        self._attr_name = f"CallMeBot Telegram {recipient} Text"
+        self._attr_name = entry.title
         self._attr_unique_id = object_id
 
     async def async_send_message(self, message: str, title: str | None = None) -> None:
