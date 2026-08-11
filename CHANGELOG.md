@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+<!-- Release notes generated using configuration in .github/release.yml at master -->
+
+* Exclude release PRs from generated notes by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/21
+* Add Telegram Call notifications by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/22
+
 ## 0.2.3
 
 * Send Telegram text notifications by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/19
