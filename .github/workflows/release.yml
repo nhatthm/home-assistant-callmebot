@@ -43,7 +43,10 @@ jobs:
             exit 1
           fi
 
-          if gh release view "$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if [[ "$version" == "0.0.0" ]]; then
+            echo "Version 0.0.0 is the development placeholder; nothing to release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $version already exists; nothing to do."
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
