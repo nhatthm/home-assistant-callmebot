@@ -67,3 +67,15 @@ class CallMeBotConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Delegate the Telegram Text Message confirmation step."""
         return await self._telegram_config_flow.async_step_text_confirm(user_input)
+
+    async def async_step_telegram_call(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Delegate the Telegram Call configuration step."""
+        return await self._telegram_config_flow.async_step_call(user_input)
+
+    async def async_step_telegram_call_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Delegate the Telegram Call confirmation step."""
+        return await self._telegram_config_flow.async_step_call_confirm(user_input)
