@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+* Send Telegram text notifications by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/19
+
 ## 0.2.2
 
 * Fix Telegram text translation rendering by @nhatthm in https://github.com/nhatthm/home-assistant-callmebot/pull/16
