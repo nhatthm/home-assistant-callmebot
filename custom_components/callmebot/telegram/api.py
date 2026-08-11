@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from enum import StrEnum
 from html import unescape
 from html.parser import HTMLParser
 from http import HTTPStatus
@@ -13,6 +14,13 @@ from aiohttp import ClientError, ClientSession
 from . import TEXT_API_URL, TEXT_VALIDATION_MESSAGE
 
 API_TIMEOUT_SECONDS = 10
+
+
+class TelegramTextValidationErrorCode(StrEnum):
+    """Safe translation keys for Telegram Text Message validation errors."""
+
+    API_ERROR = "telegram_text_api_error"
+    PERMISSION_DENIED = "telegram_text_permission_denied"
 
 
 class CallMeBotTelegramTextError(Exception):
@@ -25,6 +33,11 @@ class CallMeBotTelegramTextConnectionError(CallMeBotTelegramTextError):
 
 class CallMeBotTelegramTextValidationError(CallMeBotTelegramTextError):
     """Raised when CallMeBot rejects a Telegram Text Message recipient."""
+
+    def __init__(self, code: TelegramTextValidationErrorCode) -> None:
+        """Initialize a safe validation error code."""
+        super().__init__(code)
+        self.code = code
 
 
 class _ResponseTextParser(HTMLParser):
@@ -115,4 +128,10 @@ async def async_validate_text_recipient(session: ClientSession, recipient: str) 
         raise CallMeBotTelegramTextConnectionError from err
 
     if not is_successful_response(status, response_text):
-        raise CallMeBotTelegramTextValidationError(format_api_response(response_text))
+        formatted_response = format_api_response(response_text)
+        code = (
+            TelegramTextValidationErrorCode.PERMISSION_DENIED
+            if re.search("permission denied", formatted_response, flags=re.IGNORECASE)
+            else TelegramTextValidationErrorCode.API_ERROR
+        )
+        raise CallMeBotTelegramTextValidationError(code)

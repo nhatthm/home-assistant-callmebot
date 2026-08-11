@@ -6,19 +6,19 @@
         "title": "Choose integration type",
         "description": "Select the CallMeBot integration to configure.",
         "data": {
-          "integration_type": "Integration type"
+          "integration_type": "Integration Type"
         }
       },
       "telegram_message_type": {
         "title": "Choose message type",
         "description": "Select the Telegram message type.",
         "data": {
-          "message_type": "Message type"
+          "message_type": "Message Type"
         }
       },
       "telegram_text": {
         "title": "Configure Telegram text messages",
-        "description": "Enter `@<username>` or a full international phone number such as `+491234567890`. A test message will be sent to validate access.\n\n{api_error}",
+        "description": "Enter `@<username>` or a full international phone number such as `+1234567890`. A test message will be sent to validate access.",
         "data": {
           "recipient": "Username or phone number"
         }
@@ -29,9 +29,10 @@
       }
     },
     "error": {
-      "api_error": "CallMeBot rejected this recipient. Follow the complete response above and try again.",
-      "cannot_connect": "Unable to connect to CallMeBot. Please try again.",
-      "invalid_recipient": "Enter `@<username>` or a full phone number with country code, such as `+491234567890`."
+      "telegram_text_api_error": "The CallMeBot Telegram text API rejected the request.",
+      "telegram_text_cannot_connect": "Unable to connect to the CallMeBot Telegram text API. Please try again.",
+      "telegram_text_invalid_recipient": "Enter `@<username>` or a full phone number with country code, such as `+1234567890`.",
+      "telegram_text_permission_denied": "**Error: Permission denied for {recipient}. You need to authorize CallMeBot to contact this Telegram user ({recipient}).**\n\n**Click** [**here**](https://api2.callmebot.com/txt/login.php) **to Authenticate {recipient} and then try again.**"
     },
     "abort": {
       "already_configured": "This CallMeBot notify entity is already configured.",

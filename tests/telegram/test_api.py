@@ -13,6 +13,7 @@ from custom_components.callmebot.telegram import (
 from custom_components.callmebot.telegram.api import (
     CallMeBotTelegramTextConnectionError,
     CallMeBotTelegramTextValidationError,
+    TelegramTextValidationErrorCode,
     async_validate_text_recipient,
     format_api_response,
     is_successful_response,
@@ -28,6 +29,15 @@ Preview Links: no<br><br>
 <b>Error: Permission denied for sample_user.</b><br>
 <b>Click</b> <a href="https://api2.callmebot.com/txt/login.php"><b>here</b></a>
 <b>to Authenticate sample_user and then try again.</b><br><br>
+Telegram Error Code: 400"""
+
+FORMATTED_ERROR_RESPONSE = """User: sample_user
+Text: This is a test from Callmebot
+HTML format: no
+Preview Links: no
+**Error: Permission denied for sample_user.**
+**Click** [**here**](https://api2.callmebot.com/txt/login.php)
+**to Authenticate sample_user and then try again.**
 Telegram Error Code: 400"""
 
 SUCCESS_RESPONSE = """User: sample_user
@@ -83,15 +93,7 @@ class _Session:
 
 def test_format_api_error_response() -> None:
     """Test HTML errors retain all content and a clickable authentication link."""
-    formatted = format_api_response(ERROR_RESPONSE)
-
-    assert "User: sample_user" in formatted
-    assert "Text: This is a test from Callmebot" in formatted
-    assert "HTML format: no" in formatted
-    assert "Preview Links: no" in formatted
-    assert "**Error: Permission denied for sample_user.**" in formatted
-    assert "[**here**](https://api2.callmebot.com/txt/login.php)" in formatted
-    assert "Telegram Error Code: 400" in formatted
+    assert format_api_response(ERROR_RESPONSE) == FORMATTED_ERROR_RESPONSE
 
 
 def test_format_plain_link_without_href() -> None:
@@ -144,8 +146,21 @@ async def test_validate_recipient_rejection() -> None:
             "@sample_user",  # type: ignore[arg-type]
         )
 
-    assert "Permission denied" in str(error.value)
-    assert "[**here**](https://api2.callmebot.com/txt/login.php)" in str(error.value)
+    assert error.value.code is TelegramTextValidationErrorCode.PERMISSION_DENIED
+
+
+async def test_validate_recipient_unknown_rejection() -> None:
+    """Test an unknown API response only exposes a safe error code."""
+    session = _Session(_Response(400, "Unexpected **untrusted** response"))
+
+    with pytest.raises(CallMeBotTelegramTextValidationError) as error:
+        await async_validate_text_recipient(
+            session,
+            "@sample_user",  # type: ignore[arg-type]
+        )
+
+    assert error.value.code is TelegramTextValidationErrorCode.API_ERROR
+    assert "untrusted" not in str(error.value)
 
 
 async def test_validate_recipient_connection_error() -> None:
