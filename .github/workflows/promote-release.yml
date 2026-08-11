@@ -166,7 +166,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh label view release --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if ! gh api \
+            --silent \
+            "repos/$GITHUB_REPOSITORY/labels/release"; then
             gh label create release \
               --repo "$GITHUB_REPOSITORY" \
               --color "0E8A16" \
